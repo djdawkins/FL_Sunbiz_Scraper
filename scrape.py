@@ -19,7 +19,7 @@ def fetch_entities(url):
     print("Getting", filename)
     # Get data and save locally
     with open(f"{settings.DATA_DIR}/{filename}.csv", "w") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=settings.OUTPUT_FIELDS)
+        writer = csv.DictWriter(csvfile, fieldnames=settings.OUTPUT_FIELDS, lineterminator = '\n')
         writer.writeheader()
 
         base_url = "https://search.sunbiz.org"
@@ -52,7 +52,6 @@ def fetch_entities(url):
                 # Find next page
                 next_page_link = page.xpath("//a[@title='Next List']/@href")[0]
                 sunbiz_url = base_url + next_page_link
-
                 time.sleep(3)
 
 
@@ -99,7 +98,6 @@ def get_entity_detail(url):
         page_data["Effective Date"] = filing_info.get("Effective Date", "")
         page_data["State"] = filing_info.get("State", "")
         page_data["Status"] = filing_info.get("Status", "")
-        # page_data["Officer/Director Detail"] = filing_info.get("Officer/Director Detail", "")
 
         # Parse other detail sections
         for section in soup.find_all('div', {'class','detailSection'}):
