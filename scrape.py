@@ -77,8 +77,7 @@ def get_entity_detail(url):
             "Date Filed": "",
             "Effective Date": "",
             "State": "",
-            "Status": "",
-            # "Officer/Director Detail": ""
+            "Status": ""
         }
 
         # Parse name and company type
@@ -139,10 +138,8 @@ def get_entity_detail(url):
             
             elif "Officer/Director Detail" in section_head:
                 officer_director_detail = section.find_all('span')
-                print("here.........\n", strip_breaks(section.get_text()).replace("\r", ", "))
                 # page_data["officer_director_detail"] = strip_breaks(officer_director_detail[1].get_text())
                 try:
-                    print("there.......\n",officer_director_detail[2].get_text())
                     page_data["officer_director_detail"] = strip_breaks(section.get_text()).replace("\r", ", ")
                     # page_data["officer_director_detail"] = strip_breaks(officer_director_detail[2].get_text()).replace("\r", ", ")
                 except IndexError:
