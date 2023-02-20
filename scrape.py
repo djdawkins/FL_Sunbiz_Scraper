@@ -23,12 +23,11 @@ def fetch_entities(url):
         writer.writeheader()
 
         base_url = "https://search.sunbiz.org"
-        # sunbiz_url = url
-        sunbiz_url = "https://search.sunbiz.org/Inquiry/CorporationSearch/SearchResults/EntityName/A-1%20ACADEMICS/Page1?searchNameOrder=A1ACADEMICS"
+        sunbiz_url = url
         s = scrapelib.Scraper(retry_attempts=3, requests_per_minute=settings.REQUESTS_PER_MINUTE)
         page_num = 1
         # while True:
-        while page_num == 1:
+        while True:
             print("Getting page", str(page_num))
             page_num +=1
             try:
