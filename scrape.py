@@ -18,7 +18,7 @@ def fetch_entities(url):
     filename = url[-1]
     print("Getting", filename)
     # Get data and save locally
-    with open(f"{settings.DATA_DIR}/{filename}.csv", "w") as csvfile:
+    with open(f"{settings.DATA_DIR}/{filename}.csv", "w", encoding="utf-8") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=settings.OUTPUT_FIELDS, lineterminator = '\n')
         writer.writeheader()
 
@@ -26,9 +26,9 @@ def fetch_entities(url):
         sunbiz_url = url
         s = scrapelib.Scraper(retry_attempts=3, requests_per_minute=settings.REQUESTS_PER_MINUTE)
         page_num = 1
-        # while True:
+        
         while True:
-            print("Getting page", str(page_num))
+            print("Getting page", str(page_num), " - ", sunbiz_url)
             page_num +=1
             try:
                 entity_list_page = s.get(sunbiz_url)
@@ -76,85 +76,91 @@ def get_entity_detail(url):
             "Effective Date": "",
             "State": "",
             "Status": ""
-        }
+        } 
 
-        # Parse name and company type
-        topline = soup.find('div', {'class','corporationName'}).find_all("p")
-        page_data['company_type'] = topline[0].get_text()
-        page_data['company_name'] = topline[1].get_text()
-
-        # Parse filing info
-        filing_info = soup.find('div', {'class','filingInformation'}).find_all("span")[1]
-        filing_info = dict(zip(
-            [l.get_text() for l in filing_info.find('div').find_all('label')], 
-            [t.get_text() for t in filing_info.find('div').find_all('span')]
-            )
-        )
-
-        page_data["Document Number"] = filing_info.get("Document Number", "")
-        page_data["FEI/EIN Number"] = filing_info.get("FEI/EIN Number", "")
-        page_data["Date Filed"] = filing_info.get("Date Filed", "")
-        page_data["Effective Date"] = filing_info.get("Effective Date", "")
-        page_data["State"] = filing_info.get("State", "")
-        page_data["Status"] = filing_info.get("Status", "")
-
-        # Parse other detail sections
-        for section in soup.find_all('div', {'class','detailSection'}):
-            try:
-                section_head = section.find_all('span')[0].get_text()
-            except:
-                section_head = ""
-
-            if "Principal Address" in section_head:
-                page_data["address"] = strip_breaks(section.find_all('span')[1].find('div').get_text()).replace("\r", ", ")
-
-            elif "Registered Agent Name & Address" in section_head:
-                agent = section.find_all('span')
-                page_data["agent"] = strip_breaks(agent[1].get_text())
-                try:
-                    page_data["agent_address"] = strip_breaks(agent[2].get_text()).replace("\r", ", ")
-                except IndexError:
-                    page_data["agent_address"] = ""
-
-
-            elif "Authorized Person(s) Detail" in section_head:
-                parts = list(filter(None, section.get_text().split('\n')[3:]))
-                text = " ".join([strip_breaks(l) for l in parts])
-                page_data["authorized_persons"] = text.replace('Title\xa0', '| Title ')
-
-            elif "Annual Reports" in section_head:
-                reports = []
-                table = section.find('table')
-
-                if table.get_text() == "No Annual Reports Filed":
-                    reports.append("No Annual Reports Filed")
-                else:
-                    for row in table.find_all("tr")[1:]:
-                        reports.append(": ".join([c.get_text() for c in row.find_all('td')]))
-                page_data["annual_reports"] = " | ".join(reports)
-            
-            elif "Officer/Director Detail" in section_head:
-                officer_director_detail = section.find_all('span')
-                # page_data["officer_director_detail"] = strip_breaks(officer_director_detail[1].get_text())
-                try:
-                    page_data["officer_director_detail"] = strip_breaks(section.get_text()).replace("\r", ", ")
-                    # page_data["officer_director_detail"] = strip_breaks(officer_director_detail[2].get_text()).replace("\r", ", ")
-                except IndexError:
-                    page_data["officer_director_detail"] = ""
-
+        # Parse name and company type 
+        try:
+            topline = soup.find('div', {'class','corporationName'}).find_all("p")
+        except:
+            yield None
         
-        # Clean up active/inactive
-        status_map = {
-            'ACTIVE':'A',
-            'INACTIVE':'I'
-        }
-        if page_data['Status']:
-            try:
-                page_data['Status'] = status_map[page_data['Status']] 
-            except:
-                pass
+        else:
+            # topline = div_corpName.find_all("p")
+            page_data['company_type'] = topline[0].get_text()
+            page_data['company_name'] = topline[1].get_text()
 
-        yield page_data
+            # Parse filing info
+            filing_info = soup.find('div', {'class','filingInformation'}).find_all("span")[1]
+            filing_info = dict(zip(
+                [l.get_text() for l in filing_info.find('div').find_all('label')], 
+                [t.get_text() for t in filing_info.find('div').find_all('span')]
+                )
+            )
+
+            page_data["Document Number"] = filing_info.get("Document Number", "")
+            page_data["FEI/EIN Number"] = filing_info.get("FEI/EIN Number", "")
+            page_data["Date Filed"] = filing_info.get("Date Filed", "")
+            page_data["Effective Date"] = filing_info.get("Effective Date", "")
+            page_data["State"] = filing_info.get("State", "")
+            page_data["Status"] = filing_info.get("Status", "")
+
+            # Parse other detail sections
+            for section in soup.find_all('div', {'class','detailSection'}):
+                try:
+                    section_head = section.find_all('span')[0].get_text()
+                except:
+                    section_head = ""
+
+                if "Principal Address" in section_head:
+                    page_data["address"] = strip_breaks(section.find_all('span')[1].find('div').get_text()).replace("\r", ", ")
+
+                elif "Registered Agent Name & Address" in section_head:
+                    agent = section.find_all('span')
+                    page_data["agent"] = strip_breaks(agent[1].get_text())
+                    try:
+                        page_data["agent_address"] = strip_breaks(agent[2].get_text()).replace("\r", ", ")
+                    except IndexError:
+                        page_data["agent_address"] = ""
+
+
+                elif "Authorized Person(s) Detail" in section_head:
+                    parts = list(filter(None, section.get_text().split('\n')[3:]))
+                    text = " ".join([strip_breaks(l) for l in parts])
+                    page_data["authorized_persons"] = text.replace('Title\xa0', '| Title ')
+
+                elif "Annual Reports" in section_head:
+                    reports = []
+                    table = section.find('table')
+
+                    if table.get_text() == "No Annual Reports Filed":
+                        reports.append("No Annual Reports Filed")
+                    else:
+                        for row in table.find_all("tr")[1:]:
+                            reports.append(": ".join([c.get_text() for c in row.find_all('td')]))
+                    page_data["annual_reports"] = " | ".join(reports)
+                
+                elif "Officer/Director Detail" in section_head:
+                    officer_director_detail = section.find_all('span')
+                    # page_data["officer_director_detail"] = strip_breaks(officer_director_detail[1].get_text())
+                    try:
+                        page_data["officer_director_detail"] = strip_breaks(section.get_text()).replace("\r", ", ")
+                        # page_data["officer_director_detail"] = strip_breaks(officer_director_detail[2].get_text()).replace("\r", ", ")
+                    except IndexError:
+                        page_data["officer_director_detail"] = ""
+
+            
+            # Clean up active/inactive
+            status_map = {
+                'ACTIVE':'A',
+                'INACTIVE':'I'
+            }
+            if page_data['Status']:
+                try:
+                    page_data['Status'] = status_map[page_data['Status']] 
+                except:
+                    pass
+
+            yield page_data
 
 
 def build_search_urls():
@@ -166,15 +172,16 @@ def build_search_urls():
     url_list = []
 
     # URL search by entities that begin with each letter
-    for letter in string.ascii_lowercase[16:17]:
+    # for letter in string.ascii_lowercase[16:]:
+    for letter in ["e", "j"]:
         url_list.append(base + f"{letter}/Page1?searchNameOrder={letter}")
     
     if settings.REVERSE_ORDER:
         url_list.reverse()
 
     # URL search by entities that begin with each number 0-9
-    for num in range(0):
-        url_list.append(base + f"/{str(num)}/Page1")
+    # for num in range(10):
+    #     url_list.append(base + f"/{str(num)}/Page1")
 
     return url_list
 
