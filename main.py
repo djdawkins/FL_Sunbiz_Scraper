@@ -11,7 +11,8 @@ import boto3
 
 #Creating Session With Boto3.
 # Add additional code here as needed
-s3_obj =boto3.resource('s3')
+s3_obj = boto3.client('s3', region_name=settings.AWS_REGION, aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                          aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
 bucket_name = "fl-sunbiz-bucket"
 bucket_key = r"data/"
 
@@ -48,7 +49,7 @@ def write_csv_to_s3():
         # checking if it is a file
         if os.path.isfile(f):
             print(f)
-            s3_obj.meta.client.upload_file(f, bucket_name, bucket_key+filename)
+            s3_obj.upload_file(f, bucket_name, bucket_key+filename)
 
 
 if __name__ == "__main__":
