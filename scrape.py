@@ -15,7 +15,7 @@ import settings
 
 def fetch_entities(url):
 
-    filename = url[-1]
+    filename = url[1]
     print("Getting", filename)
     # Get data and save locally
     with open(f"{settings.DATA_DIR}/{filename}.csv", "w", encoding="utf-8") as csvfile:
@@ -23,11 +23,11 @@ def fetch_entities(url):
         writer.writeheader()
 
         base_url = "https://search.sunbiz.org"
-        sunbiz_url = url
+        sunbiz_url = url[0]
         s = scrapelib.Scraper(retry_attempts=3, requests_per_minute=settings.REQUESTS_PER_MINUTE)
         page_num = 1
-        
-        while True:
+        switch = True
+        while switch:
             print("Getting page", str(page_num), " - ", sunbiz_url)
             page_num +=1
             try:
@@ -50,6 +50,11 @@ def fetch_entities(url):
 
                 # Find next page
                 next_page_link = page.xpath("//a[@title='Next List']/@href")[0]
+                next_page_first_letter = next_page_link.split("&")[2].lstrip("searchNameOrder=")[0].lower()
+
+                if str(filename) != next_page_first_letter:
+                    switch = False
+
                 sunbiz_url = base_url + next_page_link
                 time.sleep(3)
 
@@ -163,7 +168,7 @@ def get_entity_detail(url):
             yield page_data
 
 
-def build_search_urls():
+def build_search_urls(ltr_list, num = False):
     """
     Builds a list of urls to get lists of entities by name. Sunbiz needs params 
     to list all entities by name, so build a list urls interpolated with all possible searches.
@@ -171,17 +176,23 @@ def build_search_urls():
     base = "https://search.sunbiz.org/Inquiry/CorporationSearch/SearchResults/EntityName/"
     url_list = []
 
-    # URL search by entities that begin with each letter
-    # for letter in string.ascii_lowercase[16:]:
-    for letter in ["e", "j"]:
-        url_list.append(base + f"{letter}/Page1?searchNameOrder={letter}")
+    if num == "False":
+        start = string.ascii_lowercase.index(ltr_list[0])
+        finish = string.ascii_lowercase.index(ltr_list[1])+1
+        # URL search by entities that begin with each letter
+        for letter in string.ascii_lowercase[start:finish]:
+        # for letter in ltr_list:
+            url_list.append((base + f"{letter}/Page1?searchNameOrder={letter}", letter))
     
-    if settings.REVERSE_ORDER:
-        url_list.reverse()
+        if settings.REVERSE_ORDER:
+            url_list.reverse()
 
-    # URL search by entities that begin with each number 0-9
-    # for num in range(10):
-    #     url_list.append(base + f"/{str(num)}/Page1")
+    else:
+        start = int(ltr_list[0])
+        finish = int(ltr_list[1]) + 1
+        # URL search by entities that begin with each number 0-9
+        for num in range(start, finish):
+            url_list.append((base + f"/{str(num)}/Page1", num))
 
     return url_list
 
