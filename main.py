@@ -60,4 +60,4 @@ if __name__ == "__main__":
 
     print("Getting data...")
     run()
-    write_csv_to_s3()
+    # write_csv_to_s3()

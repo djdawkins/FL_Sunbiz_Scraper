@@ -27,6 +27,7 @@ def fetch_entities(url):
         s = scrapelib.Scraper(retry_attempts=3, requests_per_minute=settings.REQUESTS_PER_MINUTE)
         page_num = 1
         switch = True
+        # while page_num <= 3:
         while switch:
             print("Getting page", str(page_num), " - ", sunbiz_url)
             page_num +=1
@@ -50,9 +51,10 @@ def fetch_entities(url):
 
                 # Find next page
                 next_page_link = page.xpath("//a[@title='Next List']/@href")[0]
-                next_page_first_letter = next_page_link.split("&")[2].lstrip("searchNameOrder=")[0].lower()
+                next_page_first_letter = next_page_link.split("&")[2].lstrip("searchNameOrder").lstrip("=")[0].lower()
 
                 if str(filename) != next_page_first_letter:
+                    print("\n","next_page_link", next_page_first_letter)
                     switch = False
 
                 sunbiz_url = base_url + next_page_link
