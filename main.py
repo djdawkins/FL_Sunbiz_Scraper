@@ -16,13 +16,13 @@ logging.basicConfig(filename="sunbiz.log",
 
 
 def run():
-    urls = build_search_urls()
+    urls = build_search_urls() # needs to return list wiki school-coach-list
     print(urls)
-    # Initiate multi-thread scrape of urls
-    threads = min(settings.MAX_THREADS, len(urls))
-    with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-        for r in executor.map(fetch_entities, urls):
-           return r
+    # # Initiate multi-thread scrape of urls
+    # threads = min(settings.MAX_THREADS, len(urls))
+    # with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+    #     for r in executor.map(fetch_entities, urls):
+    #        return r
 
 
 

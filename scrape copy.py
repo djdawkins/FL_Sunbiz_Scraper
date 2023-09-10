@@ -6,7 +6,7 @@ import string
 from datetime import datetime
 import itertools
 import lxml.html
-import requests
+
 import scrapelib
 from bs4 import BeautifulSoup
 
@@ -25,11 +25,36 @@ def fetch_entities(url):
         base_url = "https://search.sunbiz.org"
         # sunbiz_url = url
         sunbiz_url = "https://search.sunbiz.org/Inquiry/CorporationSearch/SearchResults/EntityName/A-1%20ACADEMICS/Page1?searchNameOrder=A1ACADEMICS"
-        coach_url = "https://en.wikipedia.org/wiki/List_of_current_NCAA_Division_I_FBS_football_coaches"
-
         s = scrapelib.Scraper(retry_attempts=3, requests_per_minute=settings.REQUESTS_PER_MINUTE)
         page_num = 1
-        entity_list_page = s.get(coach_url)
+        # while True:
+        while page_num == 1:
+            print("Getting page", str(page_num))
+            page_num +=1
+            try:
+                entity_list_page = s.get(sunbiz_url)
+            except scrapelib.HTTPError:
+                continue
+            except:
+                continue
+            else:
+                page = lxml.html.fromstring(entity_list_page.text)
+
+                entity_name = page.xpath('//*[@id="search-results"]/table/tbody/tr/td[@class="medium-width"]/text()')
+                status = page.xpath('//*[@id="search-results"]/table/tbody/tr/td[@class="small-width"]/text()')
+                active_link = page.xpath('//*[@id="search-results"]/table/tbody/tr/td[@class="large-width"]/a/@href')
+                for name, stat, link in itertools.zip_longest(entity_name, status, active_link):
+                    if stat == 'Active':
+                        for d in get_entity_detail(base_url + link):
+                            if d:
+                                writer.writerow(d)
+
+                # Find next page
+                next_page_link = page.xpath("//a[@title='Next List']/@href")[0]
+                sunbiz_url = base_url + next_page_link
+
+                time.sleep(3)
+
 
 def get_entity_detail(url):
     
@@ -138,73 +163,26 @@ def get_entity_detail(url):
         yield page_data
 
 
-def get_entity_detail(url):
-    
-    s = scrapelib.Scraper(
-        retry_attempts=4, 
-        requests_per_minute=settings.REQUESTS_PER_MINUTE
-    )
-
-    try:
-        page = s.get(url)
-    except:
-        yield None
-
-    else:
-        soup = BeautifulSoup(page.content, 'html.parser')
-
-        page_data = {
-            "Document Number": "",
-            "FEI/EIN Number": "",
-            "Date Filed": "",
-            "Effective Date": "",
-            "State": "",
-            "Status": "",
-            # "Officer/Director Detail": ""
-        }
-
-        # Parse name and company type
-        topline = soup.find('div', {'class','corporationName'}).find_all("p")
-        # page_data['company_type'] = topline[0].get_text()
-        # page_data['company_name'] = topline[1].get_text()
-
-        yield topline
-
-
 def build_search_urls():
     """
     Builds a list of urls to get lists of entities by name. Sunbiz needs params 
     to list all entities by name, so build a list urls interpolated with all possible searches.
     """
-    # wiki school-coach url
-    base = "https://en.wikipedia.org/wiki/List_of_current_NCAA_Division_I_FBS_football_coaches"
+    base = "https://search.sunbiz.org/Inquiry/CorporationSearch/SearchResults/EntityName/"
     url_list = []
 
-    req = requests.get(base, headers)
-    soup = BeautifulSoup(req.content, 'html.parser')
-
-    s = scrapelib.Scraper(retry_attempts=3, requests_per_minute=settings.REQUESTS_PER_MINUTE)
-    entity_list_page = s.get(base)
-    page = lxml.html.fromstring(entity_list_page.text)
-    status = page.xpath('//text()')
-    status = page.xpath('//table//')
-    # status = page.xpath('//*[@id="search-results"]/table/tbody/tr/td[@class="small-width"]/text()')
-
-
-
-
-    # # URL search by entities that begin with each letter
-    # for letter in string.ascii_lowercase[16:17]:
-    #     url_list.append(base + f"{letter}/Page1?searchNameOrder={letter}")
+    # URL search by entities that begin with each letter
+    for letter in string.ascii_lowercase[16:17]:
+        url_list.append(base + f"{letter}/Page1?searchNameOrder={letter}")
     
-    # if settings.REVERSE_ORDER:
-    #     url_list.reverse()
+    if settings.REVERSE_ORDER:
+        url_list.reverse()
 
-    # # URL search by entities that begin with each number 0-9
-    # for num in range(0):
-    #     url_list.append(base + f"/{str(num)}/Page1")
+    # URL search by entities that begin with each number 0-9
+    for num in range(0):
+        url_list.append(base + f"/{str(num)}/Page1")
 
-    return status
+    return url_list
 
 
 def strip_breaks(text):
